@@ -1,0 +1,46 @@
+node('node') {
+    currentBuild.result = "SUCCESS"
+    try {
+	
+	   checkout scm
+       stage('Checkout'){
+		  git url: 'https://github.com/SteveOzo/testdevops'
+		  sh 'git clean -fdx; sleep 4;'
+       }
+
+       stage('Test'){
+         print "Ejecutando el test"
+		 sh 'python -m pip install pytest'
+         sh 'python -m pytest ./app/test_for_app.py'
+
+       }
+
+       stage('Build Docker'){
+
+            sh './bash/build_app.sh'
+       }
+
+	  stage('Publish') {
+      when {
+        branch 'master'
+      }
+	  environment {
+			registry = "steveozo/testdevops"
+			registryCredential = ‘dockerhub’
+		}
+      steps {
+        withDockerRegistry([ credentialsId: "6544de7e-17a4-4576-9b9b-e86bc1e4f903", url: "" ]) {
+          sh 'docker push testdevsu/app:latest'
+        }
+		}
+	}
+
+    }
+    catch (err) {
+
+        currentBuild.result = "FAILURE"
+
+        throw err
+    }
+
+}
